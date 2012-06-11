@@ -175,6 +175,7 @@ Abhängigkeiten.
   und auf der dann erzeugten Instanz noch einmal \fverb{initialize}.}
 
 \subsection{Konstantendefinitionen}
+\label{sec:konst-def}
 
 Es gibt zwei Funktionen, um Konstanten zu definieren: 
 
@@ -186,6 +187,117 @@ void rb_define_global_const(const char *name, VALUE val)
 \noindent Die erstere definiert eine Konstante im angegebenen Modul oder der
 angegebenen Klasse, die letztere definiert eine globale Konstante
 \trans{wie \zB \fverb{RUBY\_VERSION} eine ist}.
+
+\section{Ruby-Features von C aus nutzen}
+\label{sec:ruby-von-c}
+
+Es gibt etliche Möglichkeiten, Ruby-Features von C aus aufzurufen.
+
+\subsection{Evaluieren von Ruby-Programmen in Form von Strings}
+
+Die einfachste Art, Rubys Möglichkeiten aus einem C-Programm heraus zu
+nutzen, ist einen String als Ruby-Programm zu evaluieren. Diese
+Funktion erledigt das:
+
+\begin{lstlisting}
+VALUE rb_eval_string(const char *str)
+\end{lstlisting}
+
+\noindent Die Evaluierung wird im momentanen Programmkontext
+durchgeführt, daher sind die lokalen Variablen der innersten Methode
+(die in Ruby definiert wurde), verfügbar.
+
+Es kann passieren, dass diese Evaluierung eine Exception wirft. Es
+gibt daher eine sicherere Funktion:
+
+\begin{lstlisting}
+VALUE rb_eval_string_protect(const char *str, int *state)
+\end{lstlisting}
+
+\noindent Diese gibt \verb+nil+ zurück, wenn ein Error
+auftritt. Außerdem ist \verb+*state+ Null \trans{die Zahl}, wenn
+\verb+str+ erfolgreich evaluiert wurde, sonst Nicht-Null.
+
+\subsection{ID oder symbol}
+\label{sec:id-oder-symbol}
+
+Du kannst Methoden auch direkt aufrufen, ohne einen String zu
+parsen. Dafür muss ich jedoch zunächst IDs erklären: Eine ID ist der
+Integer, der dazu dient, Dinge wie Variablen in Ruby zu
+identifizieren. Der Ruby-Datentyp für IDs ist \verb+Symbol+, auf den
+man in Ruby in einer der folgenden Formen zugreifen kann:
+
+\begin{lstlisting}
+:Identifier
+# oder
+:"any kind of string"
+\end{lstlisting}
+
+Um den ID-Wert eines Strings von C-Code aus zu erhalten, sollten Sie
+die Funktion
+
+\begin{lstlisting}
+rb_intern(const char *name)
+\end{lstlisting}
+
+\noindent benutzen. Die ID eines Ruby-Objekts (Symbol oder String)
+hingegen können Sie hiermit feststellen:
+
+\begin{lstlisting}
+rb_to_id(VALUE symbol)
+\end{lstlisting}
+
+Umgekehrt können Sie
+
+\begin{lstlisting}
+VALUE SYM2ID(ID id)
+\end{lstlisting}
+
+\noindent nutzen, um auf diese Art und Weise das Ruby-Symbol zu einer
+ID zu erhalten.
+
+\subsection{Ruby-Methoden von C aus aufrufen}
+
+Es ist möglich, Ruby-Methoden direkt von C aus aufzurufen. Dafür gibt
+es die folgende Funktion:
+
+\begin{lstlisting}
+VALUE rb_funcall(VALUE recv, ID mid, int argc, ...)
+\end{lstlisting}
+
+\noindent Diese Funktion ruft auf dem Empfänger \verb+recv+ die
+Methode, die durch das Symbol \verb+mid+ bezeichnet wird,
+auf. \trans{\fverb{argc} gibt die Anzahl der zu übergebenden Argumente
+  an, danach folgen die Argumente als \VALUEs.}
+
+\subsection{Variablen und Konstanten abfragen}
+
+Sie können Klassen- und Instanzvariablen mit entsprechenden
+Zugriffsfunktionen abrufen und es ist ebenfalls möglich, auf dieselben
+globalen Variablen in beiden Umgebungen zuzugreifen. Jedoch gibt es
+keine Möglichkeit, Rubys lokale Variablen abzurufen.
+
+Die Funktionen, Instanzvariablen abzufragen und zu setzen sind:
+
+\begin{lstlisting}
+VALUE rb_ivar_get(VALUE obj, ID id)
+VALUE rb_ivar_set(VALUE obj, ID id, VALUE val)
+\end{lstlisting}
+
+\noindent\verb+id+ muss dabei das Symbol sein, welches Sie mithilfe von \verb+rb_intern()+ bekommen
+können. \trans{Das Symbol sollte mit einem At-Zeichen @ beginnen.}
+
+Auf Konstanten von Klassen und Modulen erhalten Sie hiermit Zugriff:
+
+\begin{lstlisting}
+VALUE rb_const_get(VALUE obj, ID id)
+\end{lstlisting}
+
+Siehe \ref{sec:konst-def} auf Seite \pageref{sec:konst-def} für die
+Definition neuer Konstanten. \trans{Für globale Konstanten nimmt man
+  als \fverb{obj} am besten \fverb{rb\_cObject}, das ist die Klasse
+  Object von C aus gesehen, also \zB
+  \lstinline!rb_const_get(rb_cObj,rb_intern("RUBY_VERSION"))!.}
 
 %%% Local Variables: 
 %%% mode: latex
