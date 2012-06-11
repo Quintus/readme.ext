@@ -1,0 +1,550 @@
+\chapter{Grundwissen}
+\label{cha:grundwissen}
+
+In C haben Variablen Typen und Daten nicht. Im Gegensatz dazu haben
+Ruby-Variablen keinen festen Typ, aber dafür die Daten selbst, sodass
+jegliche Daten zwischen den beiden Sprachen konvertiert werden
+müssen.
+
+Ruby-Daten werden in C durch den Typ \VALUE beschrieben. Jedes
+\VALUE-Objekt besitzt einen Datentyp \trans{der der Ruby-Klasse
+  entspricht}.
+
+Um die C-Daten eines \VALUEs zu erhalten, müssen Sie: 
+
+\begin{enumerate}
+\item Den Datentyp des \VALUEs herausfinden
+\item Den \VALUE in C-Daten konvertieren
+\end{enumerate}
+
+Eine Konversion zu einem falschen Datentyp kann schwerwiegende Folgen
+haben.
+
+\section{Datentypen}
+\label{sec:datentypen}
+
+Der Ruby-Interpreter kennt die in Tabelle \ref{tab:datentypen}
+definierten Datentypen. Die meisten dieser Typen werden durch
+C-Strukturen (\verb+struct+s) beschrieben.
+
+\begin{table}[hbtp]\centering
+  \begin{tabular}{>{\ttfamily}ll>{\ttfamily}l}
+    \textbf{\rmfamily Typ} & \textbf{Beschreibung}   & \textbf{\rmfamily Ruby-Klasse} \\
+    \hline
+    \multicolumn{3}{c}{Wahrheitswerte}\\
+    \hline
+    T\_FALSE               & \verb+false+            & FalseClass \\
+    T\_NIL                 & \verb+nil+              & NilClass \\
+    T\_TRUE                & \verb+true+             & TrueClass \\
+    \hline
+    \multicolumn{3}{c}{Objekte}\\
+    \hline
+    T\_ARRAY               & Array                   & Array \\
+    T\_BIGNUM              & Mutli-Precision-Integer & Bignum \\
+    T\_CLASS               & Klasse                  & Class \\
+    T\_COMPLEX             & Komplexe Zahl           & Complex \\
+    T\_FILE                & IO-Stream               & IO \\
+    T\_FIXNUM              & 31- oder 63-Bit-Integer & Fixnum \\
+    T\_FLOAT               & Gleitkommazahl          & Float \\
+    T\_HASH                & Assozatives Array       & Hash \\
+    T\_MODULE              & Modul                   & Module \\
+    T\_OBJECT              & Gewöhnliches Objekt     & \\
+    T\_RATIONAL            & Rationale Zahl          & Rational \\
+    T\_REGEXP              & Regulärer Ausdruck      & Regexp\\
+    T\_STRING              & String                  & String \\
+    T\_STRUCT              & (Ruby-)Struktur         & Struct \\
+    T\_SYMBOL              & Symbol                  & Symbol \\
+    \hline
+    \multicolumn{3}{c}{Anderes}\\
+    \hline
+    T\_DATA                & Daten                   & \\
+    \hline
+    \multicolumn{3}{c}{Intern genutzte Typen}\\
+    \hline
+    T\_ICLASS &&\\
+    T\_MATCH  &&\\
+    T\_NODE   &&\\
+    T\_UNDEF  &&\\
+    T\_ZOMBIE
+  \end{tabular}
+
+  \vspace{\baselineskip}
+
+  Alle Typen sind gewöhnliche konstante Zahlen.
+  \caption{Von Ruby verwendete Datentypen}
+  \label{tab:datentypen}
+\end{table}
+
+\section{Den Datentyp eines \VALUEs überprüfen}
+\label{sec:pruefen}
+
+Das Makro \verb+TYPE()+, das in der Datei \path{ruby.h} definiert ist,
+ermöglicht die Überprüfung des Datentyps eines \VALUEs. \verb+TYPE()+
+gibt eines der in Tabelle \ref{tab:datentypen} angegebenen
+\verb+T_XXXX+-Makros (es handelt sich hierbei ausschließlich um
+Zahlen) zurück. Um verschiedene Datentypen zu behandeln, wird Ihr Code
+vermutlich so oder ähnlich aussehen:
+
+\begin{lstlisting}
+switch (TYPE(obj)) {
+  case T_FIXNUM:
+    /* Fixnum behandeln */
+    break;
+  case T_STRING:
+    /* String behandeln*/
+    break;
+  case T_ARRAY:
+    /* Array behandeln*/
+    break;
+  default:
+    /* Exception werfen */
+    rb_raise(rb_eTypeError, "not valid value");
+    break;
+}
+\end{lstlisting}
+
+Daneben gibt es noch eine Funktion, um den Datentyp zu überprüfen:
+
+\begin{lstlisting}
+  void Check_Type(VALUE value, int type)
+\end{lstlisting}
+
+\noindent Sie wirft eine Exception \trans{der Klasse
+  \fverb{TypeError}}, wenn der \VALUE nicht den angegeben Typ besitzt.
+
+Für Fixnums und \verb+nil+ gibt es schnellere Makros:
+
+\begin{lstlisting}
+FIXNUM_P(obj)
+NIL_P(obj)
+\end{lstlisting}
+
+\trans{Darüber hinaus gibt es ein weiteres Makro namens
+  \fverb{RTEST()}, welches das Verhalten eines üblichen
+  Ruby-\fverb{if}-Statements ohne weitere Bedingungen (also einen
+  Existenzcheck) nachahmt. Dieses Makro gibt für \fverb{nil} und
+  \fverb{false} einen falschen und für alle anderen Objekte einen
+  wahren Wert zurück.}
+
+\section{Einen \VALUE in C-Daten konvertieren}
+\label{sec:value2c}
+
+Die Daten für die Typen \verb+T_NIL+, \verb+T_FALSE+ und \verb+T_TRUE+
+sind jeweils \verb+nil+, \verb+false+ sowie \verb+true+. In C werden
+sie durch die folgenden Konstanten beschrieben: \verb+Qnil+,
+\verb+Qfalse+ und \verb+Qtrue+. Beachten Sie, dass \verb+Qfalse+ zwar
+auch im C-Sinne falsch ist (d.i. \verb+0+), nicht jedoch \verb+Qnil+.
+
+\begin{table}[btp]
+  \centering\ttfamily
+  \begin{tabular}{lll}
+    \textbf{\rmfamily Datentyp} & \textbf{\rmfamily Inhalt in Ruby} & \textbf{\rmfamily C-Konstante}\\
+    \hline
+    T\_FALSE & false & Qfalse \\
+    T\_NIL   & nil   & Qnil \\
+    T\_TRUE  & true  & Qtrue \\
+  \end{tabular}
+  \caption{Übersicht über die Wahrheitswerte}
+  \label{tab:wahrheitswerte}
+\end{table}
+
+Die Daten des \verb+T_FIXNUM+-Datentyps sind \trans{je nach
+  Prozessorarchitektur} feste 31- oder 63-Bit-Integers. Diese Größe
+hängt von der Größe des C-Typs \verb+long+ ab; ist \verb+long+ 32 Bit
+groß, so enthält \verb+T_FIXNUM+ 31 Bit, ist es indessen 64 Bit groß,
+so enthält \verb+T_FIXNUM+ 63 Bit. \trans{Auf Seite
+  \pageref{sec:c2value} wird erläutert, wofür das hier fehlende Bit
+  verwendet wird.}
+
+\verb+T_FIXNUM+ kann mithilfe der Makros \verb+FIX2INT()+ und
+\verb+FIX2LONG()+ in einen C-Integer konvertiert werden. Obwohl Sie
+vor deren Gebrauch prüfen müssen, ob die Daten tatsächlich ein
+\verb+Fixnum+ sind, sind sie schneller. \verb+FIX2LONG()+ wirft
+niemals Exceptions, aber \verb+FIX2INT()+ wirft einen
+\verb+RangeError+ wenn das Ergebnis kleiner oder größer als der
+Datenbereich von \verb+int+ ist.
+
+Außerdem gibt es noch \verb+NUM2INT()+ sowie \verb+NUM2LONG()+, die
+jede Ruby-Zahl in einen C-Integer konvertieren. Diese Makros enthalten
+zudem eine Typüberprüfung, weshalb sie eine Exception werfen, wenn die
+Konvertierung fehlschlägt. Um \verb+double float+s zu erhalten, kann
+man \verb+NUM2DBL()+ auf dieselbe Art und Weise verwenden.
+
+Sie können die Makros \verb+StringValue()+ und \verb+StringValuePtr()+
+verwenden, um einen \verb+char*+ aus einem \VALUE zu erhalten.
+\verb+StringValue(var)+ ersetzt den Wert von \verb+var+ mit dem
+Ergebnis von \lstinline+var.to_str()+. \verb+StringValuePtr(var)+
+macht das Gleiche, gibt jedoch die \verb+char*+\-Re\-prä\-sen\-ta\-tion
+von \verb+var+ zurück. Beide Makros werden den Ersetzungsschritt
+auslassen, falls \verb+var+ bereits ein Ruby-String ist.  Ebenfalls
+wichtig ist, dass diese Makros nur Lvalues als Argumente annehmen,
+sodass sie den Wert von \verb+var+ in-place ändern können.
+
+Sie können auch ein Makro namens \verb+StringValueCStr()+
+benutzen. Prinzipiell ist das das Gleiche wie \verb+StringValuePtr()+,
+fügt aber zusätzlich noch ein extra \verb+NUL+-Zeichen an das Ende
+an. Wenn das Ergebnis \trans{der Konvertierung mithilfe von
+  \fverb{to\_str}} bereits ein \verb+NUL+-Zeichen enthält, wirft
+dieses Makro einen \verb+ArgumentError+. \verb+StringValuePtr()+
+garantiert das eine, abschließende \verb+NUL+ nicht, und es kann
+passieren, dass das Ergebnis mehrere \verb+NUL+-Zeichen enthält.
+
+\begin{table}[btp]
+  \centering
+  \begin{tabularx}{\linewidth}{>{\ttfamily}l>{\ttfamily}lX}
+    \textbf{\rmfamily Makro} & \textbf{\rmfamily Rückgabewert} & \textbf{Beschreibung}\\
+    \hline
+
+    StringValue(val) & VALUE & Äquivalent zu \lstinline+val.to_str+ in
+    Ruby.\\
+
+    StringValuePtr(val) & char* & Wie \verb+StringValue(val)+, aber
+    gibt einen C-String zurück. Das Ergebnis kann kein, ein oder
+    mehrere \verb+NUL+-Zeichen enthalten.\\
+
+    StringValueCStr(val) & char* & Wie \verb+StringValuePtr+, aber
+    garantiert genau \emph{ein} \verb+NUL+-Zeichen im gesamten String,
+    und zwar am Ende.
+  \end{tabularx}
+  \caption{Möglichkeiten der Konvertierung eines Ruby-Strings in einen C-String}
+  \label{tab:stringkonv}
+\end{table}
+
+Andere Datentypen haben passende C-Strukturen, beispielsweise der
+\verb+RArray+-Struct für \verb+T_ARRAY+, etc. Ein \VALUE, der eine
+passende C-Struktur besitzt, kann zu einem Pointer auf den Struct
+gecastet werden. Makros, die einen solchen Cast durchführen, haben die
+Form \verb+RXXXX+, beispielsweise \verb+RARRAY(obj)+. Siehe dazu die
+Datei \path{ruby.h}.
+
+Es gibt ein paar Zugriffsmakros für Struct-Members, zum Beispiel
+\verb+RSTRING_LEN(s)+, um die Länge eines Ruby-String-Objekts zu
+erhalten. Auf den allokierten Speicher kann mithilfe von
+\verb+RSTRING_PTR(str)+ zugegriffen werden. Für Arrays existieren
+dementsprechend \verb+RARRAY_LEN(ary)+ und \verb+RARRAY_PTR(ary)+.
+
+\begin{notice}
+  Ändern Sie niemals direkt einen Wert einer Struktur, wenn Sie nicht
+  für das Ergebnis geradestehen wollen. Solche Sachen sind oftmals
+  Grund für einige interessante Bugs.
+\end{notice}
+
+\section{Konvertieren von C-Daten in \VALUEs}
+\label{sec:c2value}
+
+Um C-Daten in Ruby-\VALUEs zu konvertieren gibt es zwei Möglichkeiten:
+
+\begin{description}
+\item[\fverb{Fixnum}] 1 Bit nach links verschieben, dann das LSB
+  setzen.
+\item[Andere \VALUE-Pointer] Nach \VALUE casten.
+\end{description}
+
+Ob ein \VALUE ein Pointer ist oder nicht, können Sie
+durch Überprüfung des LSBs feststellen.
+
+Bedenken Sie außerdem, dass Ruby nicht jedem beliebigen Pointer
+erlaubt, ein \VALUE zu sein; es muss sich um Pointer auf Ruby bekannte
+Strukturen handeln. Diese Strukturen sind in der Datei \path{ruby.h}
+defininiert.
+
+Um C-Zahlen in Ruby-Zahlen zu konvertieren, können Sie diese Makros
+benutzen:
+
+\begin{description}
+\item[\fverb{INT2FIX()}] für Integers mit einer Länge von 31 Bit oder
+  weniger.
+\item[\fverb{INT2NUM()}] für beliebig große Integers.
+\end{description}
+
+\verb+INT2NUM()+ konvertiert einen Integer in ein Bignum, wenn er
+außerhalb des Fixnum-Bereichs liegt, ist aber ein bisschen langsamer.
+
+\section{Verändern von Ruby-Daten}
+\label{sec:ruby-daten-aendern}
+
+Wie ich bereits beschrieben habe, empfehle ich nicht, die interne
+Struktur eines Objekts zu verändern. Um Objekte zu bearbeiten, nutzen
+Sie bitte die Funktionen, die Ihnen der Ruby-Interpreter bereitstellt.
+Viele (aber nicht alle) dieser nützlichen Funktionen sind in Tabelle
+\ref{tab:rubyfuncs} aufgeführt.
+
+\begin{notice}
+  Übergibt man diesen Funktionen ein Objekt eines anderen Typs als
+  jenem, den sie erwarten, können sie den Ruby-Interpreter zum Absturz
+  bringen \trans{und das ist nicht nur bei Arrays so\footnote{Im
+      Originaldokument wurden an dieser Stelle lediglich Arrays
+      angesprochen.}.}.
+\end{notice}
+
+\begin{longtable}{p{0.5\textwidth}p{0.5\textwidth}}
+  \caption{Einige nützliche Funktionen für Ruby-\VALUEs}\label{tab:rubyfuncs}\\
+  \textbf{Funktion und Aufruf} & \textbf{Beschreibung}\\ \hline
+\endfirsthead
+  \textbf{Funktion und Aufruf} & \textbf{Beschreibung}\\ \hline
+\endhead
+  \hline \multicolumn{2}{r}{\emph{Fortsetzung auf nächster Seite}}
+\endfoot
+  \hline
+\endlastfoot
+  \multicolumn{2}{c}{String-Funktionen}\\
+  \hline
+  \begin{lstlisting}
+rb_str_new(const char *ptr,
+  long len)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Erstellt einen Ruby-String mit bestimmter Länge.
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_str_new2(const char *ptr)
+rb_str_new_cstr(const char *ptr)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Erstellt einen Ruby-String aus einen C-String. Es ist das
+    Gleiche wie \lstinline+rb_str_new(ptr, strlen(ptr))+.
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_enc_str_new(const char *ptr,
+  long len, rb_encoding *enc)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Erstellt einen neuen String mit dem angegebenen Encoding
+    \trans{\fverb{*ptr} sollte den String auch entsprechend kodiert
+      enthalten, Ruby setzt nur das Encoding-Tag}.
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_usascii_str_new(
+  const char *ptr, long len) 
+rb_usascii_str_new_cstr(
+  const char *ptr)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Erstellt einen neuen String mit US-ASCII-Encoding.
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_utf8_encoding()
+  \end{lstlisting}&
+  \begin{flushleft}
+    Gibt das \verb+rb_encoding*+ für UTF-8 zurück. \transmark
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_enc_find(const char* name)    
+  \end{lstlisting}&
+  \begin{flushleft}
+    Gibt das \verb+rb_encoding*+ für \verb+name+
+    zurück. \transmark
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_str_export_to_enc(
+  VALUE str, rb_encoding* enc)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Äquivalent zu \lstinline+str.encode(enc)+ in Ruby. \transmark
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_tainted_str_new(
+  const char *ptr, long len)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Erstellt einen Ruby-String, der \emph{tainted} ist. Strings, die
+    aus externen Quellen kommen, sollten als \emph{tainted} markiert
+    werden. \trans{Das gehört zu Rubys Sicherheitskonzept}
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_tainted_str_new2(
+  const char *ptr)
+rb_tainted_str_new_cstr(
+  const char *ptr)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Erstellt einen neuen \emph{tainted}-String. Funktioniert wie
+    \verb+rb_str_new_cstr()+.
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_sprintf(const char *format,
+  ...)
+rb_vsprintf(const char *format,
+  va_list ap)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Erstellt einen neuen Ruby-String mithilfe des
+    \man{printf}{3}-Formats.
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_str_cat(VALUE str,
+  const char *ptr, long len)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Hängt \verb+len+ Bytes von \verb+ptr+ an den Ruby-String an.
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_str_cat2(VALUE str,
+  const char* ptr)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Hängt einen C-String an einen Ruby-String an. Das ist das Gleiche
+    wie \lstinline+rb_str_cat(str, ptr, strlen(ptr))+.
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_str_catf(VALUE str,
+  const char* format, ...)
+rb_str_vcatf(VALUE str,
+  const char* format, va_list ap)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Hängt den C-String und nachfolgende Argumente an den Ruby-String
+    \verb+str+ an. Diese Funktionen sind jeweils äquivalent zu
+    \lstinline+rb_str_cat2(str, rb_sprintf(format, ...))+ und
+    \lstinline+rb_str_cat2(str, rb_vsprintf(format, ap))+.
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_str_resize(VALUE str,
+  long len)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Ändert die Länge des Ruby-Strings \verb+str+ auf \verb+len+
+    Bytes und wirft eine Exception, wenn \verb+str+ nicht veränderbar
+    ist. Die Länge von \verb+str+ muss im Vorhinein festgelegt
+    werden. Ist \verb+len+ kleiner als die alte Länge, werden die
+    Inhalte hinter \verb+len+ Bytes abgeschnitten, ist es größer als
+    die alte Länge, so werden die Inhalte hinter \verb+len+ Bytes
+    nicht erhalten und werden unbrauchbar sein \trans{Gemeint ist,
+      dass bei der Vergrößerung des Strings keine Garantie für
+      irgenwelche Inhalte hinter dem bisherigen Inhalt übernommen
+      werden kann, abgesehen davon, dass da \emph{irgendwas} sein
+      wird.}. Beachten Sie, dass der Rückgabewert von
+    \verb+RSTRING_PTR(str)+ durch den Aufruf dieser Funktion ändern
+    kann.
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_str_set_len(VALUE str,
+  long len)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Setzt die Länge des Ruby-Strings \verb+str+ und wirft eine
+    Exception, wenn \verb+str+ nicht veränderbar ist. Diese Funktion
+    garantiert den Bestand von bis zu \verb+len+ Bytes unter
+    Missachtung von \verb+RSTRING_LEN(str)+. \verb+len+ darf die
+    Kapazität von \verb+str+ nicht überschreiten.
+  \end{flushleft}\\
+
+  \hline
+  \multicolumn{2}{c}{Array-Funktionen}\\
+  \hline
+
+  \begin{lstlisting}
+rb_ary_new()
+  \end{lstlisting}&
+  \begin{flushleft}
+    Erstellt ein Array ohne Inhalt.
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_ary_new2(long len)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Erstellt ein Array ohne Inhalt, allokiert aber internen Speicher
+    für \verb+len+ Elemente.
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_ary_new3(long n, ...)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Erstellt ein \verb+n+-elementiges Array aus den Argumenten
+    \trans{bei denen es sich um \VALUE-Objekte handeln muss.}.
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_ary_new4(long n, VALUE *elts)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Erstellt aus einem C-Array ein \verb+n+-elementiges Ruby-Array.
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_ary_to_ary(VALUE obj)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Konvertiert das Objekt in ein Array. Entspricht Object\#to\_ary.
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_ary_aref(int argc,
+  VALUE *argv, VALUE ary)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Äquivalent zu Array\#[].
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_ary_entry(VALUE ary,
+  long offset)
+  \end{lstlisting}&
+  \begin{flushleft}
+    \lstinline+ary[offset]+.
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_ary_subseq(VALUE ary,
+  long beg, long len)
+  \end{lstlisting}&
+  \begin{flushleft}
+    \lstinline+ary[beg, len]+.
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_ary_push(VALUE ary,
+  VALUE val)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Hängt \verb+val+ an \verb+ary+ an. \transmark
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_ary_pop(VALUE ary)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Entfernt das letzte Element aus dem Array und gibt es
+    zurück. \transmark
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_ary_shift(VALUE ary)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Entfernt das erste Element aus dem Array und gibt es
+    zurück. \transmark
+  \end{flushleft}\\
+
+  \begin{lstlisting}
+rb_ary_unshift(VALUE ary,
+  VALUE val)
+  \end{lstlisting}&
+  \begin{flushleft}
+    Fügt \verb+val+ als das erste Element des Arrays ein; die
+    restlichen Elemente werden um 1 nach hinten
+    geschoben. \transmark
+  \end{flushleft}\\
+\end{longtable}
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "main"
+%%% End: 

@@ -1,0 +1,75 @@
+\documentclass[11pt,ngerman,twoside]{scrbook}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Packages
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{babel}
+\usepackage{fontspec}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{boxedminipage}
+\usepackage{xspace}
+\usepackage{scrhack} % Patches some non-KOMA-compatible packages
+\usepackage[colorlinks=true]{hyperref}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Commands
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
+\newcommand\todo[1]{\textbf{\textcolor{red}{TODO: #1}}}
+\newcommand\name[1]{\textsf{#1}\xspace}
+\newcommand\transcomment{Anm.\,d.\,Übers.}
+\newcommand\transmark{[\transcomment]}
+\newcommand\trans[1]{\textit{[#1 — \transmark]}}
+\newcommand\fverb[1]{\mbox{\texttt{#1}}} % "Verbatim" in arguments
+\newcommand\man[2]{\href{http://linux.die.net/man/#2/#1}{\textsf{#1(#2)}}}
+
+\newcommand\VALUE{\mbox{\texttt{VALUE}}\xspace}
+\newcommand\VALUEs{\mbox{\texttt{VALUE}s}\xspace}
+
+\newcommand\zB{z.\,B. }
+\newcommand\ZB{\Z.\,B. }
+\renewcommand\dh{d.\,h. } % ? already defined?
+\newcommand\Dh{D.\,h.}
+\newcommand\di{d.\,i. }
+\newcommand\Di{D.\,i. }
+
+\newenvironment{abstract}{\sffamily}{\par\vspace{\baselineskip}\noindent}
+\newenvironment{notice}{\par\vspace{\baselineskip}\noindent\boxedminipage{\linewidth}\textbf{Hinweis: }}{\endboxedminipage\par\vspace{\baselineskip}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Configuration
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\setmainfont{Linux Libertine O}
+\setsansfont{Linux Biolinum O}
+
+\lstset{language=c,
+basicstyle=\ttfamily,
+showstringspaces=false}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Start of document
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
+\begin{document}
+\frontmatter
+\include{title}
+\include{preface}
+\tableofcontents
+\listoffigures
+\listoftables
+
+\mainmatter
+\include{01}
+\include{02}
+\include{03}
+
+\backmatter
+\appendix
+
+\end{document}

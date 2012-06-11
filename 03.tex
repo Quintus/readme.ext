@@ -1,0 +1,193 @@
+\chapter{Ruby mit C erweitern}
+\label{cha:ruby-erweitern}
+
+\section{Neue Features zu Ruby hinzufügen}
+\label{sec:neue-features}
+
+Du kannst neue Features (Klassen, Module, etc.) zum Ruby-Interpreter
+hinzufügen. Ruby bietet ein API für die folgenden Dinge:
+
+\begin{itemize}
+\item Klassen, Module
+\item Methoden, Singleton-Methoden
+\item Konstanten
+\end{itemize}
+
+\subsection{Klassen/Modul-Definition}
+
+Benutzen Sie die folgenden Funktionen, um eine Klasse oder ein Modul
+zu definieren:
+
+\begin{lstlisting}
+VALUE rb_define_class(const char *name, VALUE super)
+VALUE rb_define_module(const char *name)
+\end{lstlisting}
+
+\noindent Diese Funktionen geben die neue Klasse oder das neue Modul
+zurück. Um sie später zu benutzen, sollten Sie diese Referenz in einer
+Variablen speichern.
+
+Mithilfe der folgenden Funktionen können sie verschachtelte Klassen
+und Module erstellen:
+
+\begin{lstlisting}
+VALUE rb_define_class_under(VALUE outer, const char *name,
+                            VALUE super)
+
+VALUE rb_define_module_under(VALUE outer, const char *name)
+\end{lstlisting}
+
+\trans{Jede definierte Klasse muss eine Superklasse besitzen, die
+  implizite Annahme von \fverb{Object} greift auf der C-Seite
+  nicht. Will man also eine »gewöhnliche« Klasse, die von
+  \fverb{Object} erbt, erstellen muss man als Argument für
+  \fverb{super} \fverb{rb\_cObject}, das Klassenobjekt für
+  \fverb{Object}, wählen.}
+
+\subsection{Definition von (Singleton-)Methoden}
+
+Methoden und Singleton-Methoden können Sie mit diesen Funktionen
+definieren:
+
+\begin{lstlisting}
+void rb_define_method(VALUE klass, const char *name,
+                      VALUE  (*func)(), int argc)
+
+void rb_define_singleton_method(VALUE object, const char *name,
+                                VALUE (*func)(), int argc)
+\end{lstlisting}
+
+\noindent\verb+argc+ gibt die Anzahl der Argumente für die C-Funktion an. Diese
+Zahl muss kleiner als 17 sein, aber ich bezweifle, dass Sie so viele
+brauchen. \trans{\fverb{*func} ist der Pointer zu der C-Funktion, die
+  bei Aufruf ausgeführt werden soll, \fverb{*name} der Name, unter dem
+  Ruby die Methode definiert.}
+
+Ist \verb+argc+ negativ, so gibt es anstatt der Argumentanzahl eine
+spezielle Funktionssignatur für die aufzurufende C-Funktion an.
+
+Wenn \verb+argc+ -1 ist, wird die Funktion als
+
+\begin{lstlisting}
+VALUE func(int argc, VALUE *argv, VALUE obj)
+\end{lstlisting}
+
+\noindent aufgerufen, wobei \verb+argc+ die tatsächliche Anzahl übergebener
+Argumente, \verb+argv+ ein C-Array mit diesen Argumenten und
+\verb+obj+ der Empfänger ist \trans{, der \fverb{self} in Ruby
+  entspricht, weshalb man diesen Parameter auch üblicherweise so
+  nennt.}.
+
+Ist \verb+argc+ hingegen -2, so werden die Argumente als Ruby-Array
+übergeben. Die Funktion wird dann wie folgt aufgerufen:
+
+\begin{lstlisting}
+VALUE func(VALUE obj, VALUE args)
+\end{lstlisting}
+
+\noindent\verb+obj+ ist hier der Empfänger \trans{\fverb{self}} und \verb+args+
+das Ruby-Array, welches die eigentlichen Argumente enthält.
+
+Es gibt noch einige weitere Funktionen, um Methoden zu
+definieren. Eine nimmt eine ID als den Namen der zu definierenden
+Methode an. Siehe \ref{sec:id-oder-symbol} auf Seite
+\pageref{sec:id-oder-symbol} für IDs.
+
+\begin{lstlisting}
+void rb_define_method_id(VALUE klass, ID name, 
+                         VALUE (*func)(ANYARGS), int argc)
+\end{lstlisting}
+
+Dann gibt es noch zwei Funktionen, um private und geschützte Methoden
+zu erstellen:
+
+\begin{lstlisting}
+void rb_define_private_method(VALUE klass, const char *name, 
+                              VALUE (*func)(), int argc)
+
+void rb_define_protected_method(VALUE klass, const char *name, 
+                                VALUE (*func)(), int argc)
+\end{lstlisting}
+
+Zu guter Letzt definiert \verb+rb_define_module_function()+
+Modulmethoden, die private \emph{und} Singleton-Methoden eines Moduls
+sind. Beispielsweise ist \verb+sqrt+ eine Modulfunktion des
+\verb+Math+\-Mo\-duls. Sie kann wie folgt aufgerufen werden:
+
+\begin{lstlisting}[language=ruby]
+Math.sqrt(4)
+
+# oder aber:
+
+include Math
+sqrt(4)
+\end{lstlisting}
+
+\noindent Um Modulmethoden zu definieren, nutzen Sie:
+
+\begin{lstlisting}
+void rb_define_module_function(VALUE module, const char *name,
+                               VALUE (*func)(), int argc)
+\end{lstlisting}
+
+Ergänzend dazu können funktionsähnliche Methoden, bei denen es sich um
+private Methoden im \verb+Kernel+-Modul handelt \trans{\zB \#puts},
+mithilfe dieser Funktion definiert werden:
+
+\begin{lstlisting}
+void rb_define_global_function(const char *name, VALUE (*func)()
+                               int argc)
+\end{lstlisting}
+
+Um einen Alias für eine Methode anzulegen, gibt es:
+
+\begin{lstlisting}
+void rb_define_alias(VALUE module, const char* new,
+                     const char* old)
+\end{lstlisting}
+
+Für les- und schreibbare Attributsmethoden \trans{entspricht
+  \fverb{attr\_accessor} in Ruby}:
+
+\begin{lstlisting}
+void rb_define_attr(VALUE klass, const char *name, int read,
+                    int write)
+\end{lstlisting}
+
+Um die \verb+allocate+-Klassenmethode zu (un-)definieren:
+
+\begin{lstlisting}
+void rb_define_alloc_func(VALUE klass,
+                          VALUE (*func)(VALUE klass))
+
+void rb_undef_alloc_func(VALUE klass)
+\end{lstlisting}
+
+\noindent\verb+func+ muss dabei die Klasse als Argument annehmen und eine neu
+allokierte Instanz zurückgeben. Diese Instanz sollte so leer wie
+irgend möglich sein, ohne jegliche teure (eingeschlossen externe)
+Abhängigkeiten.
+
+\trans{Es ist diese Funktion, die man nutzen sollte wenn man mithilfe
+  von \fverb{DATA\_WRAP\_STRUCT()} \& Co. C-Daten in Ruby-Objekte
+  einbauen möchte. Siehe dazu Seite \pageref{sec:c-in-ruby}. Rubys
+  eigene Class\#new-Methode ruft immer zunächst \fverb{allocate} auf
+  und auf der dann erzeugten Instanz noch einmal \fverb{initialize}.}
+
+\subsection{Konstantendefinitionen}
+
+Es gibt zwei Funktionen, um Konstanten zu definieren: 
+
+\begin{lstlisting}
+void rb_define_const(VALUE klass, const char *name, VALUE val)
+void rb_define_global_const(const char *name, VALUE val)
+\end{lstlisting}
+
+\noindent Die erstere definiert eine Konstante im angegebenen Modul oder der
+angegebenen Klasse, die letztere definiert eine globale Konstante
+\trans{wie \zB \fverb{RUBY\_VERSION} eine ist}.
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "main"
+%%% End: 
