@@ -1,0 +1,162 @@
+\chapter{Informationen zwischen Ruby und C transferieren}
+\label{cha:infos-ruby-c}
+
+\section{Ruby-Konstanten, die von C aus abgerufen werden können}
+\label{sec:ruby-konstanten-von-c}
+
+Die folgenden Ruby-Konstanten können von C aus abgerufen werden:
+
+\begin{itemize}
+\item \verb+Qtrue+
+\item \verb+Qfalse+
+\end{itemize}
+
+\noindent Dies sind boolsche Werte. \verb+Qfalse+ ist in C auch
+einfach \verb+0+.
+
+\begin{itemize}
+\item \verb+Qnil+
+\end{itemize}
+
+\noindent Und das ist das Ruby-\verb+nil+ in C. Diese Informationen
+können auch in Tabelle \ref{tab:wahrheitswerte} auf Seite
+\pageref{tab:wahrheitswerte} gefunden werden.
+
+\section{Globale Variablen zwischen Ruby und C}
+\label{sec:glob-variablen-ruby-c}
+
+Mithilfe von globalen Variablen können Werte sowohl von Ruby als auch
+von C aus benutzt werden. Benutzen Sie die folgenden Funktionen, um
+sie zu definieren:
+
+\begin{lstlisting}
+void rb_define_variable(const char *name, VALUE *var)
+\end{lstlisting}
+
+Diese Funktion definiert eine Variable, die von beiden Umgebungen
+abrufbar ist.  Der Wert, auf den die Variable namens \verb+var+ zeigt,
+kann dann von Ruby aus mithilfe einer globalen Variable namens
+\verb+name+ \trans{mit \fverb{\$} davor} abgerufen werden.
+
+Sie können read-only-Variablen (natürlich nur von Ruby aus nicht
+schreibbar) mit dieser Funktion definieren:
+
+\begin{lstlisting}
+void rb_define_readonly_variable(const char *name, VALUE *var)
+\end{lstlisting}
+
+Es ist auch möglich, sogenannte \emph{Hook-Variablen} definieren. Wenn
+eine solche Variable abgerufen oder ihr ein Wert zugewiesen wird, wird
+entsprechend die \verb+getter+- oder \verb+setter+-Funktion
+aufgerufen.
+
+\begin{lstlisting}
+void rb_define_hooked_variable(const char *name, VALUE *var,
+                               VALUE (*getter)(),
+                               void (*setter)())
+\end{lstlisting}
+
+\noindent Wenn Sie nur eine der beiden Funktionen nutzen wollen,
+setzen Sie einfach 0 für den Hook, den Sie nicht benötigen. Sind beide
+Hooks 0, dann macht diese Funktion das Gleiche wie
+\verb+rb_define_variable()+.
+
+Die Prototypen der \verb+getter+- und \verb+setter+-Funk\-tion\-en
+sehen wie folgt aus:
+
+\begin{lstlisting}
+VALUE (*getter)(ID id, VALUE *var);
+void (*setter)(VALUE val, ID id, VALUE *var);
+\end{lstlisting}
+
+Es besteht ebenfalls die Möglichkeit, eine in Ruby globale-Variable
+ohne eine entsprechende C-Variable zu definieren. Der Wert einer
+solchen Variablen wird nur durch Set- sowie Get-Hooks gesetzt und
+ausgelesen.
+
+\begin{lstlisting}
+void rb_define_virtual_variable(const char *name,
+                                VALUE (*getter)(),
+                                void (*setter)())
+\end{lstlisting}
+
+Die Prototypen der \verb+getter+- und \verb+setter+-Funk\-tion\-en
+sehen so aus:
+
+\begin{lstlisting}
+VALUE (*getter)(ID id);
+void (*setter)(VALUE val, ID id);
+\end{lstlisting}
+
+\section{C-Daten in ein Ruby-Objekt einbinden}
+\label{sec:c-in-ruby}
+
+Um einen C-Pointer zu wrappen und als Objekt auszugeben (einen
+gewrappten C-Pointer nennt man \emph{DATA}) gibt es die Funktion
+\verb+Data_Wrap_Struct()+.
+
+\begin{lstlisting}
+Data_Wrap_Struct(klass, mark, free, ptr)
+\end{lstlisting}
+
+\noindent\verb+Data_Wrap_Struct()+ gibt das erstellte DATA-Objekt zurück. Das Argument
+\verb+klass+ gibt die Klasse des DATA-Objekts an. \verb+mark+ ist die
+Funktion, die sämtliche von der DATA referenzierten Ruby-Objekte zu
+markieren, \verb+free+ ist die Funktion um den allokierten Speicher
+freizugeben. Ist sie -1, wird das normale \verb+free()+ für den
+Pointer benutzt.
+
+Diese \verb+mark+/\verb+free+-Funktionen werden während der Ausführung
+des Garbage Collectors aufgerufen. Keine Speicherplatzallokationen für
+Objekte sind während dieser Phase erlaubt, also erstelle in ihr keine
+Ruby-Objekte.
+
+\trans{Ruby nutzt einen sogenannten »Mark-and-Sweep«-Garbage
+  Collector, \dh zunächst wird eine Mark-Phase durchlaufen, in der
+  alle in Gebrauch befindlichen Ruby-Objekte markiert werden. Das
+  heißt für die \fverb{mark}-Funktion, dass sie sie in diesem Muster
+  mitspielen muss und die Objekte, die das DATA-Objekt referenziert,
+  markieren muss. Wenn sie dies nämlich nicht tut und das einzige
+  Objekt ist, dass eine Referenz auf ein solches Objekt besitzt, wird
+  der Garbage Collector dieses irrtümlich einsammeln. Dies ist die zweite
+  Phase: Alle Objekte, die keine Markierung besitzen, werden vom
+  Garbage Collector »entsorgt«, \dh ihr Speicher wird freigegeben. Da
+  Ruby nicht weiß, wie es mit den von Ihnen allokierten Datenstrukturen
+  Ihres DATA-Objekts umgehen soll, müssen Sie die
+  \fverb{free}-Funktion bereitstellen, die der GC aufruft, wenn keine
+  Referenz mehr auf Ihr Objekt exisitiert}
+
+Sie können Allokation und Wrapping der Struktur in einem einzigen
+Schritt durchführen:
+
+\begin{lstlisting}
+Data_Make_Struct(klass, type, mark, free, sval)
+\end{lstlisting}
+
+\noindent Dieses Makro gibt das allokierte Data-Objekt zurück, wobei
+es den Pointer in die Struktur wrappt, die ebenfalls allokiert
+wird. Insgesamt funktioniert das Makro etwa so:
+
+\begin{lstlisting}
+(sval = ALLOC(type), Data_Wrap_Struct(klass, mark, free, sval))
+\end{lstlisting}
+
+\noindent Die Argumente für klass, mark und free funktionieren wie
+ihre Gegenstücke in \verb+Data_Wrap_Struct()+. Der Variablen
+\verb+sval+ wird ein Pointer auf die allokierte Struktur zugewiesen,
+daher sollte er vom angegebenen Typ sein.
+
+Um den C-Pointer wieder aus dem DATA-Objekt auszupacken, verwenden Sie
+\verb+Data_Get_Struct()+.
+
+\begin{lstlisting}
+Data_Get_Struct(obj, type, sval)
+\end{lstlisting}
+
+\noindent Der Variablen \verb+sval+ wird ein Pointer auf die Struktur
+zugewiesen werden.
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "main"
+%%% End: 
