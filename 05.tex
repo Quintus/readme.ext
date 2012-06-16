@@ -1,0 +1,202 @@
+\chapter{Beispiel: Erstellen der C-Extension dbm}
+\label{cha:beispiel-dbm}
+
+\trans{DBM ist ein (uraltes) Datenbanksystem für Unix.}
+
+OK, hier kommt jetzt das obligatorische Beispiel zum Erstellen einer
+C-Extension. Bei diesem hier handelt es sich um Rubys Library zum
+Zugriff auf DBMs, und der vollständige Quellcode ist im
+Unterverzeichnis \path{ext/} in den Ruby-Quellen enthalten.
+
+\section{Verzeichnis erstellen}
+\label{sec:verzeichnis}
+
+\begin{verbatim}
+% mkdir ext/dbm
+\end{verbatim}
+Erstellt ein Verzeichnis im \path{ext/}-Ordner.
+
+\section{Designen der Programmbibliothek}
+\label{sec:design}
+
+Sie müssen die Library erst designen, bevor Sie sie erstellen
+können.
+
+\section{Schreiben des C-Codes}
+\label{sec:c-code}
+
+Sie werden für Ihre Extension C-Code schreiben müssen. Wenn Ihre
+Library nur eine einzelne Quellcode-Datei enthält, sollte der
+Dateiname \path{LIBRARY.c} gewählt werden \trans{wobei LIBRARY durch
+  den Namen deiner Programmbibliothek zu ersetzen ist}. Besteht Ihre
+Library jedoch aus mehreren Quellcode-Dateien, sollten Sie den Namen
+\path{LIBRARY.c} besser vermeiden, da es auf einigen Plattformen zu
+Konflikten mit der Datei \path{LIBRARY.o} kommen kann \trans{, weil
+  sonst mehrere LIBRARY.os während des Kompilierprozesses entstehen
+  würden}. Einige Funktionen der \name{mkmf}-Bibliothek, die weiter
+unten beschrieben wird, erstellen zudem eine Datei namens
+\path{conftest.c}, daher sollten Sie den Dateinamen
+\path{conftest.c} ebenfalls vermeiden.
+
+Zuallererst wird Ruby eine Initialisierungsfunktion namens
+\verb+Init_LIBRARY+ in deiner Programmbibliothek aufrufen,
+beispielsweise könnte \verb+Init_dbm()+ beim Laden der Library
+aufgerufen werden. Hier ist ein Beispiel für eine
+Initialisierungsfunktion:
+
+\begin{lstlisting}
+void
+Init_dbm(void)
+{
+    /* DBM-Klasse definieren */
+    cDBM = rb_define_class("DBM", rb_cObject);
+    /* DBM includes Enumerate module */
+    rb_include_module(cDBM, rb_mEnumerable);
+
+    /* DBM besitzt eine Klassenmethode open(), die ihre
+     * Argumente in Form eines C-Arrays bekommt. */
+    rb_define_singleton_method(cDBM, "open", fdbm_s_open, -1);
+
+    /* Die DBM-Instanzmethode close() bekommt keine Argumente. */
+    rb_define_method(cDBM, "close", fdbm_close, 0);
+
+    /* Die []-Methode hingegen nimmt eines entgegen. */
+    rb_define_method(cDBM, "[]", fdbm_fetch, 1);
+    :
+
+    /* ID einer Instanzvariablen, in der wir DBM-Daten abspeichern */
+    id_dbm = rb_intern("dbm");
+}
+\end{lstlisting}
+
+Die DBM-Extension wrappt das DBM-Struct der C-Umgebung mithilfe von
+\verb+Data_Make_Struct+.
+
+\begin{lstlisting}
+struct dbmdata {
+    int  di_size;
+    DBM *di_dbm;
+};
+
+
+obj = Data_Make_Struct(klass, struct dbmdata, 0, free_dbm, dbmp);
+\end{lstlisting}
+
+Dieser Code wrappt die \verb+dbmdata+-Struk\-tur in ein Ruby-Objekt. Wir
+vermeiden das direkte Wrapping von \verb+DBM*+, weil wir die
+Größeninformationen speichern wollen.
+
+Um die \verb+dbmdata+-Struktur wieder aus unserem Ruby-Objekt
+herauszubekommen, definieren wir das folgende Makro:
+
+\begin{lstlisting}
+#define GetDBM(obj, dbmp) {\
+    Data_Get_Struct(obj, struct dbmdata, dbmp);\
+    if (dbmp->di_dbm == 0) closed_dbm();\
+}
+\end{lstlisting}
+
+Dieses etwas kompliziertere Makro holt für uns die Struktur aus dem
+Objekt und prüft gleichzeitig, ob die DBM geschlossen ist.
+
+Es gibt drei verschiedene Wege, Methodenargumente zu erhalten. Als
+erstes gibt es da die Methoden mit einer fixen Anzahl an Argumenten,
+welche sie etwa so erhalten:
+
+\begin{lstlisting}
+static VALUE
+fdbm_delete(VALUE obj, VALUE keystr)
+{
+  :
+}
+\end{lstlisting}
+
+Das erste Argument der C-Funktion ist \verb+self+, der Rest sind die
+Argumente für die Methode.
+
+Zweitens: Methoden mit einer unbestimmten Anzahl an Argumenten
+\trans{, was etwa \fverb{*args} in Ruby entspricht und zutrifft, wenn
+  die Funktion mit -1 als Argumentanzahl definiert wurde,} erhalten
+ihre Argumente so:
+
+\begin{lstlisting}
+static VALUE
+fdbm_s_open(int argc, VALUE *argv, VALUE klass)
+{
+  :
+    if (rb_scan_args(argc, argv, "11", &file, &vmode) == 1) {
+      mode = 0666;  /* Standardwert */
+    }
+  :
+}
+\end{lstlisting}
+
+Das erste Argument ist die Anzahl der Methodenargumente, das zweite
+ist ein C-Array, welches dieselben enthält, und das dritte ist der
+Empfänger der Methode \trans{alias \fverb{self},}.
+
+Sie können die Funktion \verb+rb_scan_args()+ verwenden, um die
+Argumente zu überprüfen; deren drittes Argument ist ein String, der
+festlegt, wie Methodenargumente ausgewertet und an die nachfolgenden
+\VALUE-Referenzen zugewiesen werden sollen. \trans{In diesem Beispiel
+  etwa bedeutet \fverb{"11"}, dass die Methode mindestens 1 Argument
+  erfordert und noch 1 optionales dazukommt und deren Werte an
+  \fverb{file} und \fverb{vmode} übergeben werden sollen.}
+
+Eine andere Möglichkeit für Methoden mit unbestimmter Argumentanzahl
+ist es, die Argumente als Ruby-Array anzufordern \trans{, also die
+  Funktion mit -2 als Argumentanzahl definiert hat}, zum Beispiel so:
+
+\begin{lstlisting}
+static VALUE
+thread_initialize(VALUE thread, VALUE args)
+{
+  :
+}
+\end{lstlisting}
+
+Das erste Argument ist der Empfänger, das zweite ist ein Ruby-Array,
+welches die Argumente für die Methode enthält.
+
+\begin{notice}
+  Der GC sollte über globale Variablen, die zwar Ruby-Objekte
+  referenzieren, aber nicht zu Rubys Welt gehören, Bescheid wissen. Sie
+  müssen solche durch den Gebrauch von
+
+  \begin{lstlisting}
+void rb_global_variable(VALUE *var)
+  \end{lstlisting}
+
+  \noindent schützen.
+\end{notice}
+
+\section{\path{extconf.rb} vorbereiten}
+\label{sec:extconf.rb}
+
+Wenn eine Datei namens \path{extconf.rb} existiert, wird sie benutzt
+werden, um eine Makefile zu generieren. In dieser Datei nehmen Sie
+prüfen Sie Kompilationsbedingungen und ähnliches. Sie beginnt stets
+mit
+
+\begin{lstlisting}
+require "mkmf"
+\end{lstlisting}
+
+am Anfang der Datei. Sie können die in Tabelle \ref{tab:mkmf-funcs}
+aufgelisteten Funktionen und die in Tabelle \ref{tab:mkmf-vars}
+gezeigten Variablen verwenden, um Einfluss auf den Kompilationsprozess
+zu nehmen.
+
+\begin{table}
+  \centering
+  \begin{tabular}{ll}
+    
+  \end{tabular}
+  \caption{Einige Funktionen von \name{mkmf}}
+  \label{tab:mkmf-funcs}
+\end{table}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "main"
+%%% End: 
