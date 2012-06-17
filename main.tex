@@ -26,7 +26,7 @@
 \newcommand\name[1]{\textsf{#1}\xspace}
 \newcommand\transcomment{Anm.\,d.\,Übers.}
 \newcommand\transmark{[\transcomment]}
-\newcommand\trans[1]{\textit{[#1 — \transmark]}}
+\newcommand\trans[1]{\textit{[#1 — \transcomment]}}
 \newcommand\fverb[1]{\mbox{\texttt{#1}}} % "Verbatim" in arguments
 \newcommand\man[2]{\href{http://linux.die.net/man/#2/#1}{\textsf{#1(#2)}}}
 
@@ -49,11 +49,17 @@
 % Configuration
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\definecolor{darkgreen}{rgb}{0, 0.5, 0}
+\definecolor{darkred}{rgb}{0.5, 0, 0.1}
+
 \setmainfont{Linux Libertine O}
 \setsansfont{Linux Biolinum O}
 
 \lstset{language=c,
 basicstyle=\ttfamily,
+commentstyle=\itshape\color{darkgreen},
+stringstyle=\color{darkred},
+keywordstyle=\bfseries\color{blue},
 showstringspaces=false}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -64,9 +70,11 @@ showstringspaces=false}
 \frontmatter
 \include{title}
 \include{preface}
+\hypersetup{linkcolor=black}
 \tableofcontents
 \listoffigures
 \listoftables
+\hypersetup{linkcolor=red}
 
 \mainmatter
 \include{01}
