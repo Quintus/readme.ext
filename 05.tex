@@ -39,7 +39,7 @@ unten beschrieben wird, erstellen zudem eine Datei namens
 \path{conftest.c} ebenfalls vermeiden.
 
 Zuallererst wird Ruby eine Initialisierungsfunktion namens
-\verb+Init_LIBRARY+ in deiner Programmbibliothek aufrufen,
+\verb+Init_LIBRARY+ in Ihrer Programmbibliothek aufrufen,
 beispielsweise könnte \verb+Init_dbm()+ beim Laden der Library
 aufgerufen werden. Hier ist ein Beispiel für eine
 Initialisierungsfunktion:
@@ -50,21 +50,24 @@ Init_dbm(void)
 {
     /* DBM-Klasse definieren */
     cDBM = rb_define_class("DBM", rb_cObject);
-    /* DBM includes Enumerate module */
+    /* DBM mischt das Enumerable-Modul ein */
     rb_include_module(cDBM, rb_mEnumerable);
 
     /* DBM besitzt eine Klassenmethode open(), die ihre
      * Argumente in Form eines C-Arrays bekommt. */
-    rb_define_singleton_method(cDBM, "open", fdbm_s_open, -1);
+    rb_define_singleton_method(cDBM, "open", fdbm_s_open,
+                               -1);
 
-    /* Die DBM-Instanzmethode close() bekommt keine Argumente. */
+    /* Die DBM-Instanzmethode close() bekommt keine
+     * Argumente. */
     rb_define_method(cDBM, "close", fdbm_close, 0);
 
     /* Die []-Methode hingegen nimmt eines entgegen. */
     rb_define_method(cDBM, "[]", fdbm_fetch, 1);
     :
 
-    /* ID einer Instanzvariablen, in der wir DBM-Daten abspeichern */
+    /* ID einer Instanzvariablen, in der wir DBM-Daten
+     * abspeichern */
     id_dbm = rb_intern("dbm");
 }
 \end{lstlisting}
@@ -82,9 +85,9 @@ struct dbmdata {
 obj = Data_Make_Struct(klass, struct dbmdata, 0, free_dbm, dbmp);
 \end{lstlisting}
 
-Dieser Code wrappt die \verb+dbmdata+-Struk\-tur in ein Ruby-Objekt. Wir
-vermeiden das direkte Wrapping von \verb+DBM*+, weil wir die
-Größeninformationen speichern wollen.
+\noindent Dieser Code wrappt die \verb+dbmdata+-Struk\-tur in ein
+Ruby-Objekt. Wir vermeiden das direkte Wrapping von \verb+DBM*+, weil
+wir die Größeninformationen speichern wollen.
 
 Um die \verb+dbmdata+-Struktur wieder aus unserem Ruby-Objekt
 herauszubekommen, definieren wir das folgende Makro:
@@ -96,8 +99,8 @@ herauszubekommen, definieren wir das folgende Makro:
 }
 \end{lstlisting}
 
-Dieses etwas kompliziertere Makro holt für uns die Struktur aus dem
-Objekt und prüft gleichzeitig, ob die DBM geschlossen ist.
+\noindent Dieses etwas kompliziertere Makro holt für uns die Struktur
+aus dem Objekt und prüft gleichzeitig, ob die DBM geschlossen ist.
 
 Es gibt drei verschiedene Wege, Methodenargumente zu erhalten. Als
 erstes gibt es da die Methoden mit einer fixen Anzahl an Argumenten,
@@ -111,8 +114,8 @@ fdbm_delete(VALUE obj, VALUE keystr)
 }
 \end{lstlisting}
 
-Das erste Argument der C-Funktion ist \verb+self+, der Rest sind die
-Argumente für die Methode.
+\noindent Das erste Argument der C-Funktion ist \verb+self+, der Rest
+sind die Argumente für die Methode.
 
 Zweitens: Methoden mit einer unbestimmten Anzahl an Argumenten
 \trans{, was etwa \fverb{*args} in Ruby entspricht und zutrifft, wenn
@@ -131,9 +134,9 @@ fdbm_s_open(int argc, VALUE *argv, VALUE klass)
 }
 \end{lstlisting}
 
-Das erste Argument ist die Anzahl der Methodenargumente, das zweite
-ist ein C-Array, welches dieselben enthält, und das dritte ist der
-Empfänger der Methode \trans{alias \fverb{self},}.
+\noindent Das erste Argument ist die Anzahl der Methodenargumente, das
+zweite ist ein C-Array, welches dieselben enthält, und das dritte ist
+der Empfänger der Methode \trans{alias \fverb{self},}.
 
 Sie können die Funktion \verb+rb_scan_args()+ verwenden, um die
 Argumente zu überprüfen; deren drittes Argument ist ein String, der
@@ -145,7 +148,7 @@ festlegt, wie Methodenargumente ausgewertet und an die nachfolgenden
 
 Eine andere Möglichkeit für Methoden mit unbestimmter Argumentanzahl
 ist es, die Argumente als Ruby-Array anzufordern \trans{, also die
-  Funktion mit -2 als Argumentanzahl definiert hat}, zum Beispiel so:
+  Funktion mit -2 als Argumentanzahl zu definieren}, zum Beispiel so:
 
 \begin{lstlisting}
 static VALUE
@@ -155,8 +158,8 @@ thread_initialize(VALUE thread, VALUE args)
 }
 \end{lstlisting}
 
-Das erste Argument ist der Empfänger, das zweite ist ein Ruby-Array,
-welches die Argumente für die Methode enthält.
+\noindent Das erste Argument ist der Empfänger, das zweite ist ein
+Ruby-Array, welches die Argumente für die Methode enthält.
 
 \begin{notice}
   Der GC sollte über globale Variablen, die zwar Ruby-Objekte
@@ -170,31 +173,153 @@ void rb_global_variable(VALUE *var)
   \noindent schützen.
 \end{notice}
 
-\section{\path{extconf.rb} vorbereiten}
+\section{\protect\path{extconf.rb} vorbereiten}
 \label{sec:extconf.rb}
 
 Wenn eine Datei namens \path{extconf.rb} existiert, wird sie benutzt
-werden, um eine Makefile zu generieren. In dieser Datei nehmen Sie
-prüfen Sie Kompilationsbedingungen und ähnliches. Sie beginnt stets
-mit
+werden, um eine Makefile zu generieren. In dieser Datei prüfen Sie
+Kompilationsbedingungen und ähnliches. Sie beginnt stets mit
 
-\begin{lstlisting}
+\begin{lstlisting}{language=ruby}
 require "mkmf"
 \end{lstlisting}
 
-am Anfang der Datei. Sie können die in Tabelle \ref{tab:mkmf-funcs}
-aufgelisteten Funktionen und die in Tabelle \ref{tab:mkmf-vars}
-gezeigten Variablen verwenden, um Einfluss auf den Kompilationsprozess
-zu nehmen.
+\noindent am Anfang der Datei. Sie können \uA die in Tabelle
+\ref{tab:mkmf-funcs} aufgelisteten Funktionen und die in Tabelle
+\ref{tab:mkmf-vars} gezeigten Variablen verwenden, um Einfluss auf den
+Kompilationsprozess zu nehmen. Normalerweise sollte es nicht notwendig
+sein, \verb+$objs+ zu verwenden, da die Liste der Object-Dateien beim
+Durchsuchen der Quelldateien automatisch erzeugt wird. Sollten Sie
+jedoch während des Bauprozesses weitere Quelldateien erzeugen, müssen
+sie diese explizit angeben.
 
-\begin{table}
+\begin{table}[tbp]
   \centering
-  \begin{tabular}{ll}
-    
-  \end{tabular}
+  \begin{tabularx}{\textwidth}{>{\ttfamily}lX}\raggedright
+    \normalfont\bfseries Methode & \bfseries Beschreibung\\
+    \hline
+    have\_library(lib, func)     & Prüft, ob eine Library mit der angegebenen Funktion gefunden werden kann.\\
+    have\_func(func, header)     & Prüft, ob der angegebene Header die angegebene Funktion enthält.\\
+    have\_header(header)         & Prüft, ob die angegebene Header-Datei existiert.\\
+    create\_makefile(target)     & Generiert die Makefile.\\
+  \end{tabularx}
+
+  \vspace{\baselineskip}
+
+  \small Weitere Funktionen können Anhang \ref{apx:extconf.rb-funcs}
+  auf Seite \pageref{apx:extconf.rb-funcs} entnommen werden.
+
   \caption{Einige Funktionen von \name{mkmf}}
   \label{tab:mkmf-funcs}
 \end{table}
+
+\begin{table}[btp]
+  \centering
+  \begin{tabularx}{\textwidth}{>{\ttfamily}lX}\raggedright
+    \normalfont\bfseries Variable & \bfseries Beschreibung\\
+    \hline
+    \$CFLAGS                      & Wird in die Make-Variable \verb+CFLAGS+ aufgenommen (\zB \verb+-O+) \trans{Optionen für den C-Compiler}.\\
+    \$CXXFLAGS                    & Wird in die Make-Variable \verb+CXXFLAGS+ aufgenommen, Optionen für den C++-Compiler.  \transmark\\
+    \$CPPFLAGS                    & Wird in die Make-Variable \verb+CPPFLAGS+ aufgenommen (\zB \verb+-I+, \verb+-D+) \trans{Optionen für den C-Präprozessor}.\\
+    \$LDFLAGS                     & Wird in die Make-Variable \verb+LDFLAGS+ aufgenommen (\zB \verb+-L+) \trans{Optionen für den Linker}.\\
+    \$objs                        & Liste der Object-Dateien.\\
+  \end{tabularx}
+  \caption{Globale Variablen in \name{mkmf}}
+  \label{tab:mkmf-vars}
+\end{table}
+
+Wird irgendeine Kompilationsbedingung nicht erfüllt, sollten Sie auch
+nicht \verb+create_makefile+ aufrufen. So wird weder die Makefile
+generiert, noch wird der Kompilationsvorgang gestartet. \trans{Da kann
+  man gar nicht genug drauf hinweisen. Es gibt zahlreiche
+  C-Extensions, die \emph{trotz fehlender Abhängigkeiten} die Makefile
+  generieren und auf diese Art und Weise den Buildprozess
+  selbstverständlich fehlschlagen lassen. Das Ergebnis sind kryptische
+  Fehlermeldungen vom Compiler, die ein Nicht-C-Programmierer meist
+  nicht verstehen kann. Stellen Sie in der \path{extconf.rb} fest,
+  dass eine benötigte Library nicht da ist, rufen Sie nach Möglichkeit
+  Kernel\#abort mit einer \emph{informativen} Fehlermeldung à la
+  »Cannot find XY library.« auf. Damit tun Sie sowohl den Nutzern, die
+  nicht rätseln müssen, als auch sich selbst, der Sie weniger unnötige
+  Bugreports erhalten werden, einen großen Gefallen.}
+
+\section{\name{prepend} vorbereiten (optional)}
+\label{sec:prepend-vorbereiten}
+
+Wenn eine Datei namens \path{depend} existiert, wird sie in die
+Makefile übernommen, um Abhängigkeiten zu überprüfen. Sie können diese
+Datei mit diesem Befehl erstellen:
+
+\begin{verbatim}
+% gcc -MM *.c > depend
+\end{verbatim}
+
+\noindent Das ist völlig ungefährlich. Bereiten Sie diese Datei vor.
+
+\section{Makefile generieren}
+\label{sec:makefile-generieren}
+
+Versuchen Sie, die Makefile hiermit zu generieren:
+
+\begin{verbatim}
+% ruby extconf.rb
+\end{verbatim}
+
+Soll die Library in das Verzeichnis \path{vendor_ruby} anstelle des
+üblichen \path{site_ruby} installiert werden, verwenden Sie die Option
+\verb+--vendor+ wie folgt:
+
+\begin{verbatim}
+% ruby extconf.rb --vendor
+\end{verbatim}
+
+Dieser Schritt ist nicht notwendig, wenn Sie die Extension in das
+\path{ext}-Verzeichnis des Ruby-Interpreters stecken, da in diesem
+Falle die Kompilierung des Interpreters diesen Schritt bereits für Sie
+übernimmt.
+
+\trans{\path{site_ruby} und \path{vendor_ruby} sind nur für
+  C-Extensions, die nicht in Gem-Form verteilt werden, relevant. Da
+  sie höchstwahrscheinlich Ihre C-Extension in ein Gem verpacken
+  werden, ignorieren Sie \fverb{--vendor} einfach. \name{RubyGems}
+  besitzt ein eigenes Verzeichnissystem und kümmert sich bei der
+  Installation Ihres Gems um die entsprechenden Parameter für Ihre
+  Makefile. Daher können Sie einfach den Aufruf der \path{extconf.rb}
+  ohne Parameter übernehmen.}
+
+\section{Make}
+\label{sec:make}
+
+Geben Sie
+
+\begin{verbatim}
+% make
+\end{verbatim}
+
+\noindent ein, um Ihre C-Extension zu kompilieren. Auch dieser Schritt
+ist überflüssig, wenn sich die Extension im \path{ext}-Verzeichnis der
+Ruby-Quellen befindet.
+
+\section{Debugging}
+\label{sec:debugging}
+
+\trans{Dieser Abschnitt ist ebenfalls nur für Nicht-Gem-C-Extensions
+  interessant, da C-Extensions in Gems immer als dynamisch gelinkte
+  Library vorliegen (müssen).}
+
+Eventuell wollen Sie Ihre Extension \verb+rb_debug+gen. Extensions
+können statisch gelinkt werden, indem der Datei \path{ext/Setup} der
+Verzeichnisname hinzugefügt wird, wodurch Sie die Extension mit dem
+Debugger untersuchen können.
+
+\section{Fertig!}
+\label{sec:fertig}
+
+Fertig, Sie haben nun eine Library mit C-Extension. Sie können damit
+machen, was Sie wollen, Rubys Autor hat nicht vor, Ihrem auf der
+Ruby-API basierenden Code irgendwelche Restriktionen
+aufzuerlegen. Seien Sie frei Ihr Programm zu benutzen, zu verändern,
+zu verteilen oder auch zu verkaufen.
 
 %%% Local Variables: 
 %%% mode: latex
