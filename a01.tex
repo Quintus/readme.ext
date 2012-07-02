@@ -1,0 +1,157 @@
+\chapter{Übersicht über die Ruby-Quelldateien}
+\label{cha:ruby-quellen-uebersicht}
+
+Hier finden Sie eine Übersicht über die Organisation von Rubys eigenem
+Quellcode.
+
+%\begin{longtable}{p{0.33\textwidth}p{0.66\textwidth}}
+\begin{longtable}{>{\ttfamily}p{0.33\textwidth}p{0.66\textwidth}}
+  \caption{Übersicht über die Ruby-Quelldateien}\label{tab:rubyquellen}\\
+  \textbf{\rmfamily Datei} & \textbf{Beschreibung}\\ \hline
+\endfirsthead
+  \textbf{\rmfamily Datei} & \textbf{Beschreibung}\\ \hline
+\endhead
+  \hline \multicolumn{2}{r}{\emph{Fortsetzung auf nächster Seite}}
+\endfoot
+  \hline
+\endlastfoot
+  \multicolumn{2}{c}{\textbf{Sprachkern von Ruby}}\\
+  \hline
+
+  class.c    & Klassen und Module\\
+  error.c    & Exception-Klassen und der Exception-Mechanismus.\\
+  gc.c       & Speicherverwaltung\\
+  load.c     & Laden von Programmbibliotheken\\
+  object.c   & Objekte\\
+  variable.c & Variablen und Konstanten\\
+
+  \hline
+  \multicolumn{2}{c}{\textbf{Ruby-Syntax-Parser}}\\
+  \hline
+
+  parse.y               & YACC-Grammatik \transmark\\
+  $\rightarrow$ parse.c & Automatisch generiert\\
+  keywords              & Reservierte Schlüsselwörter\\
+  $\rightarrow$ lex.c   & Automatisch generiert\\
+
+  \hline
+  \multicolumn{2}{c}{\textbf{Ruby-Evaluierer (alias YARV)}}\\
+  \hline
+
+  compile.c               & \\
+  eval.c                  & \\
+  eval\_error.c           & \\
+  eval\_jump.c            & \\
+  eval\_safe.c            & \\
+  insns.def               & Definition der VM-Anweisungen\\
+  iseq.c                  & Implementation von \verb+VM::ISeq+\\
+  thread.c                & Thread-Verwaltung und Kontextänderungen\\
+  thread\_win32.c         & Thread-Implementation \trans{für Windows}\\
+  thread\_pthread.c       & Dito \trans{für unixoide Systeme}\\
+  vm.c                    & \\
+  vm\_dump.c              & \\
+  vm\_eval.c              & \\
+  vm\_exec.c              & \\
+  vm\_insnhelper.c        & \\
+  vm\_method.c            & \\
+                          & \\
+  opt\_insns\_unif.def    & Vereinheitlichung der Anweisungen \\
+  opt\_operand.def        & Definitionen zur Optimierung \\
+  $\rightarrow$ insn*.inc & Automatisch generiert\\
+  $\rightarrow$ opt*.inc  & Automatisch generiert\\
+  $\rightarrow$ vm.inc    & Automatisch generiert\\
+
+  \hline
+  \multicolumn{2}{c}{\textbf{Engine für Reguläre Ausdrücke (Oniguruma)}}\\
+  \hline
+
+  regex.c     & \\
+  regcomp.c   & \\
+  regenc.c    & \\
+  regerror.c  & \\
+  regexec.c   & \\
+  regparse.c  & \\
+  regsyntax.c & \\
+
+  \hline
+  \multicolumn{2}{c}{\textbf{Nützliche Funktionen}}\\
+  \hline
+
+  debug.c    & Debugging-Symbole für den C-Debugger\\
+  dln.c      & Dynamisches Laden\\
+  st.c       & Allgemeine Hashtabelle\\
+  strftime.c & Zeiten formatieren\\
+  util.c     & Sonstige Dinge\\
+
+  \hline
+  \multicolumn{2}{c}{\textbf{Implementation des Ruby-Interpreters}}\\
+  \hline
+
+  dmyext.c        & \\
+  dmydln.c        & \\
+  dmyencoding.c   & \\
+  id.c            & \\
+  inits.c         & \\
+  main.c          & \\
+  ruby.c          & \\
+  version.c       & \\
+
+  gem\_prelude.rb & \\
+  prelude.rb      & \\
+
+  \hline
+  \multicolumn{2}{c}{\textbf{Klassenbibliothek}}\\
+  \hline
+
+  array.c                         & \verb+Array+\\
+  bignum.c                        & \verb+Bignum+\\
+  compar.c                        & \verb+Comparable+\\
+  complex.c                       & \verb+Complex+\\
+  cont.c                          & \verb+Fiber+, \verb+Continuation+\\
+  dir.c                           & \verb+Dir+\\
+  enum.c                          & \verb+Enumerable+\\
+  enumerator.c                    & \verb+Enumerator+\\
+  file.c                          & \verb+File+\\
+  hash.c                          & \verb+Hash+\\
+  io.c                            & \verb+IO+\\
+  marshal.c                       & \verb+Marshal+\\
+  math.c                          & \verb+Math+\\
+  numeric.c                       & \verb+Numeric+, \verb+Integer+, \verb+ixnum+, \verb+Float+\\
+  pack.c                          & \verb+Array#pack+, \verb+String#unpack+\\
+  proc.c                          & \verb+Binding+, \verb+Proc+\\
+  process.c                       & \verb+Process+\\
+  random.c                        & Zufallszahlen\\
+  range.c                         & \verb+Range+\\
+  rational.c                      & \verb+Rational+\\
+  re.c                            & \verb+Regexp+, \verb+MatchData+\\
+  signal.c                        & \verb+signal+\\
+  sprintf.c                       & \verb+Kernel#sprintf+ \transmark\\
+  string.c                        & \verb+String+\\
+  struct.c                        & \verb+Struct+\\
+  time.c                          & \verb+Time+\\
+                                  & \\
+  defs/known\_errors.def          & \verb+Errno::*+-Exception-Klassen\\
+  $\rightarrow$ known\_errors.inc & Automatisch generiert\\
+
+  \hline
+  \multicolumn{2}{c}{\textbf{Multilingualisation}}\\
+  \hline
+
+  encoding.c  & \verb+Encoding+\\
+  transcode.c & \verb+Encoding::Converter+\\
+  enc/*.c     & Encoding-Klassen\\
+  enc/trans/* & Tabellen zum Mapping von Codepoints \trans{(Unicode-Codepoints)}.\\
+
+  \hline
+  \multicolumn{2}{c}{\textbf{Implementation des Goruby-Interpreters}}\\
+  \hline
+
+  goruby.c                      & \\
+  golf\_prelude.rb              & Goruby-spezifische Programmbibliotheken\\
+  $\rightarrow$ golf\_prelude.c & Automatisch generiert\\
+\end{longtable}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "main"
+%%% End: 
