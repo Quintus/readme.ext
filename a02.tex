@@ -1,0 +1,101 @@
+\chapter{Referenz zum Ruby-Extension-API}
+\label{cha:api-referenz}
+
+\section{Typen}
+\label{sec:api:typen}
+
+\begin{description}
+\item[\texttt{VALUE}:] Das ist der Typ für das Ruby-Objekt. Die
+  eigentlichen Strukturen wie \zB RString sind in der Datei
+  \path{ruby.h} definiert. Um Werte aus diesen Strukturen abzufragen,
+  sollten Sie Casting-Makros wie \verb+RSTRING(obj)+ benutzen.
+\end{description}
+
+\section{Variablen und Konstanten}
+\label{sec:api:variablen-konstanten}
+
+\begin{description}
+\item[\texttt{Qnil}:] Konstant: \verb+nil+-Objekt.
+\item[\texttt{Qtrue}:] Konstant: \verb+true+-Objekt
+  (Standard-Wahrheitswert \trans{das bezieht sich auf Rubys Eigenart,
+    alle Werte als wahr zu behandeln. \lstinline+true+ ist einfach
+    \emph{nur} wahr, es enthält abgesehen von dieser Eigenschaft keine,
+    aber auch gar keine Information. Dagegen ist \lstinline+27+ zwar
+    auch wahr, enthält aber neben der Eigenschaft, wahr zu sein, auch
+    noch die Information, dass es sich um den Wert 27 handelt, der
+    durchaus noch einen mathematischen Sinn besitzt, der mit der
+    Eigenschaft, wahr zu sein, nichts zu tun hat.}).
+\item[\texttt{Qfalse}:] Konstant: \verb+false+-Objekt.
+\end{description}
+
+\section{Wrapping von C-Pointern}
+\label{sec:api:c-pointer}
+
+\begin{lstlisting}
+Data_Wrap_Struct(VALUE klass, void (*mark)(),
+                 void (*free)(), void *sval)
+\end{lstlisting}
+
+\noindent Wrappt einen C-Pointer in ein Ruby-Objekt hinein. Wenn
+dieses Objekt weitere Ruby-Objekte referenziert, sollten jene während
+des GC-Prozesses von der \verb+mark+-Funktion markiert werden.
+Ansonsten sollte \verb+mark+ \verb+0+ sein. Wird das Objekt nirgendwo
+mehr referenziert, so wird die \verb+free+-Funktion aufgerufen, um den
+Pointer aufzulösen.
+
+\begin{lstlisting}
+Data_Make_Struct(klass, type, mark, free, sval)
+\end{lstlisting}
+
+\noindent Dieses Makro allokiert Speicher mithilfe von
+\verb+malloc()+, weist diesen dann der Variablen \verb+sval+ zu und
+gibt schließlich ein DATA-Objekt, welches den Pointer zum allokierten
+Speicher enthält, zurück.
+
+\begin{lstlisting}
+Data_Get_Struct(data, type, sval)
+\end{lstlisting}
+
+\noindent Dieses Makro liest den Pointer aus einer DATA und weist ihn
+der Variablen \verb+sval+ zu.
+
+\section{Überprüfen von Datentypen}
+\label{sec:api:datentypen}
+
+\begin{lstlisting}
+TYPE(value)
+FIXNUM_P(value)
+NIL_P(value)
+void Check_Type(VALUE value, int type)
+void Check_SafeStr(VALUE value)
+\end{lstlisting}
+
+\section{Konvertierung von Datentypen}
+\label{sec:api-konvertieren}
+
+\begin{lstlisting}
+FIX2INT(value), INT2FIX(i)
+FIX2LONG(value), LONG2FIX(l)
+NUM2INT(value), INT2NUM(i)
+NUM2UINT(value), UINT2NUM(ui)
+NUM2LONG(value), LONG2NUM(l)
+NUM2ULONG(value), ULONG2NUM(ul)
+NUM2LL(value), LL2NUM(ll)
+NUM2ULL(value), ULL2NUM(ull)
+NUM2OFFT(value), OFFT2NUM(off)
+NUM2SIZET(value), SIZET2NUM(size)
+NUM2SSIZET(value), SSIZET2NUM(ssize)
+NUM2DBL(value)
+rb_float_new(f)
+StringValue(value)
+StringValuePtr(value)
+StringValueCStr(value)
+rb_str_new2(s)
+\end{lstlisting}
+
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "main"
+%%% End: 
