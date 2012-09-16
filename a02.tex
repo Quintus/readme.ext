@@ -93,6 +93,235 @@ StringValueCStr(value)
 rb_str_new2(s)
 \end{lstlisting}
 
+\section{Klassen/Modul-Definition}
+\label{sec:api-classmod}
+
+\begin{lstlisting}
+VALUE rb_define_class(const char *name, VALUE super)
+\end{lstlisting}
+
+\noindent Definiert eine neue Ruby-Klasse als Subklasse von
+\verb+super+ \trans{Für Klassen, die einfach nur Subklasse von Object
+  sein sollen, sollte man \fverb{rb\_cObject} als Superklasse nehmen}.
+
+\begin{lstlisting}
+VALUE rb_define_class_under(VALUE module,
+                            const char *name,
+                            VALUE super)
+\end{lstlisting}
+
+\noindent Definiert eine neue Ruby-Klasse als Subklasse von
+\verb+super+ innerhalb des Moduls \verb+module+.
+
+\begin{lstlisting}
+VALUE rb_define_module(const char *name)
+\end{lstlisting}
+
+\noindent Definiert ein neues Ruby-Modul.
+
+\begin{lstlisting}
+VALUE rb_define_module_under(VALUE module, const char *name)
+\end{lstlisting}
+
+\noindent Definiert ein neues Ruby-Modul innerhalb eines bestehenden.
+
+\begin{lstlisting}
+void rb_include_module(VALUE klass, VALUE module)
+\end{lstlisting}
+
+\noindent Mischt \verb+module+ in \verb+klass+ ein, sofern dies nicht
+bereits geschehen ist (in diesem Fall wird der Aufruf schlicht
+ignoriert). \trans{Entspricht Module\#include.}
+
+\begin{lstlisting}
+void rb_extend_object(VALUE object, VALUE module)
+\end{lstlisting}
+
+\noindent Mischt \verb+module+ auf Instanzebene in \verb+object+
+ein. \trans{Entspricht Object\#extend.}
+
+\section{Definition globaler Variablen}
+\label{sec:api-globals}
+
+\begin{lstlisting}
+void rb_define_variable(const char *name, VALUE *var)
+\end{lstlisting}
+
+\noindent Definiert eine globale Variable, auf die sowohl von Ruby als
+auch von C aus zugegriffen werden kann. Wenn der Name ein Zeichen
+enthält, das im Ruby-Symbol nicht erlaubt ist, können Ruby-Programme
+nicht auf die Variable zugreifen \trans{in der Praxis lässt man, so
+  man tatsächlich Ruby ausschließen will, meist das führende
+  \$-Zeichen weg, was in Ruby 1.9 den gleichen Effekt hat}.
+
+\begin{lstlisting}
+void rb_define_readonly_variable(const char *name, VALUE *var)
+\end{lstlisting}
+
+\noindent Definiert eine nur-lesbare globale Variable. Funktioniert
+ansonsten genau wie \verb+rb_define_variable()+.
+
+\begin{lstlisting}
+ void rb_define_virtual_variable(const char *name,
+                                 VALUE (*getter)(),
+                                 VALUE (*setter)())
+\end{lstlisting}
+
+\noindent Definiert eine virtuelle Variable, deren Verhalten nur durch
+ein Paar von C-Funktionen bestimmt wird. Die \verb+getter+-Funktion
+wird aufgerufen, wenn die Variable referenziert wird, \verb+setter+
+wird bei Zuweisungen aufgerufen. Die Prototypen für
+\verb+getter+/\verb+setter+ sind:
+
+\begin{lstlisting}
+VALUE getter(ID id)
+oid setter(VALUE val, ID id)
+\end{lstlisting}
+
+\noindent Die \verb+getter+-Funktion muss den Wert für den Aufruf
+zurückgeben.
+
+\begin{lstlisting}
+void rb_define_hooked_variable(const char *name,
+                              VALUE *var,
+                              VALUE (*getter)(),
+                              VALUE (*setter)())
+\end{lstlisting}
+
+\noindent Definiert eine \emph{Hook}-Variable, also eine virtuelle
+Variable, die gleichzeitig eine C-Variable ist. Der \verb+getter+ wird
+als
+
+\begin{lstlisting}
+VALUE getter(ID id, VALUE *var)
+\end{lstlisting}
+
+\noindent aufgerufen und gibt einen neuen Wert zurück. Der
+\verb+setter+ als:
+
+\begin{lstlisting}
+void setter(VALUE val, ID id, VALUE *var)
+\end{lstlisting}
+
+Damit der GC globale C-Variablen, die Ruby-Objekte referenzieren,
+nicht irrtümlich einesammelt, müssen diese markiert werden:
+
+\begin{lstlisting}
+void rb_global_variable(VALUE *var)
+\end{lstlisting}
+
+\noindent weist den GC an, diese zu schützen.
+
+\section{Konstantendefinition}
+\label{sec:api-const}
+
+\begin{lstlisting}
+void rb_define_const(VALUE klass, const char *name, VALUE val)
+\end{lstlisting}
+
+\noindent Definiert eine Konstante innerhalb einer Klasse/eines
+Moduls.
+
+\begin{lstlisting}
+void rb_define_global_const(const char *name, VALUE val)
+\end{lstlisting}
+
+\noindent Definiert eine globale Konstante. Das ist einfach das
+gleiche wie:
+
+\begin{lstlisting}
+rb_define_const(rb_mKernel, name, val)
+\end{lstlisting}
+
+\section{Methodendefinition}
+\label{sec:mapi-meth}
+
+\begin{lstlisting}
+rb_define_method(VALUE klass,
+                 const char *name,
+                 VALUE (*func)(),
+                 int argc)
+\end{lstlisting}
+
+\noindent Definiert eine Methode für die angegebene
+Klasse. \verb+func+ ist die aufzurufende Funktion, \verb+argc+ die
+Anzahl der Argumente. Wenn \verb+argc+ -1 ist, erhält die Funktion
+drei Argumente: \verb+argc+ (Argumentanzahl), \verb+argv+ (Argumente
+als C-\verb+VALUE+-Array) und \verb+self+ (der Sender). Ist
+\verb+argc+ -2, erhält die Funktion zwei Argumente, \verb+self+ und
+\verb+args+, wobei \verb+args+ ein Ruby-Array der Methoden-Argumente
+ist.
+
+\begin{lstlisting}
+rb_define_private_method(VALUE klass,
+                         const char *name,
+                         VALUE (*func)(),
+                         int argc)
+\end{lstlisting}
+
+\noindent Definiert eine private Methode für eine Klasse. Die
+Argumente sind die gleichen wie für \verb+rb_define_method()+.
+
+\begin{lstlisting}
+rb_define_singleton_method(VALUE klass,
+                           const char *name,
+                           VALUE (*func)(),
+                           int argc)
+\end{lstlisting}
+
+\noindent Definiert eine Singleton-Methode
+\trans{bzw. Klassenmethode}. Die Argumente sind die gleichen wir für
+\verb+rb_define_method()+.
+
+\begin{lstlisting}
+rb_scan_args(int argc,
+             VALUE *argv,
+             const char *fmt,
+             ...)
+\end{lstlisting}
+
+\noindent Bindet die Argumente aus \verb+argc+ und \verb+argv+ and die
+durch den Format-String angegebenen \VALUE-Referenzen. Das Format kann
+in \acronym{ABNF} wie folgt beschrieben werden:
+
+\begin{verbatim}
+num-of-leading-mandatory-args  := DIGIT ; Die Anzahl der führenden
+                                        ; erforderlichen Argumente.
+num-of-optional-args           := DIGIT ; Die Anzahl der optionalen
+                                        ; Argumente.
+sym-for-variable-length-args   := "*"   ; Zeigt an, dass variable
+                                        ; Argumente als Ruby-Array
+                                        ; dargestellt werden.
+num-of-trailing-mandatory-args := DIGIT ; Die Anzahl der abschließenden
+                                        ; erforderlichen Argumente.
+sym-for-option-hash-arg        := ":"   ; Zeigt an, dass ein Optionshash
+                                        ; genutzt wird, falls das letzte
+                                        ; Argument ein Hash ist oder mittels
+                                        ; #to_hash in einen solchen konver-
+                                        ; tiert werden kann. Ist das letzte
+                                        ; Argument nil, wird es nur dann
+                                        ; übernommen, falls keine Doppeldeutig-
+                                        ; keit mit der Übernahme als leeres
+                                        ; Optionshash auftreten können, d.h.
+                                        ; '*' nicht angegeben wurde und die
+                                        ; übergebene Argumentanzahl größer
+                                        ; als erforderlich ist.
+sym-for-block-arg              := "&"   ; Zeigt an, dass ein Iterator-
+                                        ; block, falls übergeben, ge-
+                                        ; fangen werden soll.
+\end{verbatim}
+
+\noindent Beispielsweise bedeuetet \verb+"12"+, dass die Methode
+mindestens ein Argument erfordert, und höchstens drei (1+2). Daher
+müssen dem Formatstring Referenzen (Pointer) zu drei Variablen
+\trans{vom Typ \VALUE} folgen, welche auf die erkannten Argumente
+gesetzt werden. Im Falle ausgelassener Argumente, werden die
+entsprechenden Variablen auf \verb+Qnil+ gesetzt. Auch kann
+\verb+NULL+ anstelle eine Variablenreferenz übergeben werden, was zur
+Ignoranz des jeweiligen erkannten Arguments führt.
+
+Rückgabewert ist die Anzahl übergebener Argumente,
+abzüglich eines Optionshashes und des Iteratorblocks.
 
 
 %%% Local Variables: 
