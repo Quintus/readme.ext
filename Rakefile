@@ -10,8 +10,8 @@ LATEX = "lualatex"
 
 ########################################
 
-CLEAN.include("*aux", "*.lof", "*.lot", "*.log", "*.out", "*.toc")
-CLOBBER.include("*.pdf")
+CLEAN.include("src/*.aux", "src/*.lof", "src/*.lot", "src/*.log", "src/*.out", "src/*.toc")
+CLOBBER.include("src/*.pdf")
 
 begin
   `#{LATEX} --help`
@@ -22,11 +22,15 @@ end
 desc "Compiles the document 4 times in a row."
 task :compile do
   4.times do
-    sh "#{LATEX} main.tex"
+    cd "src" do
+      sh "#{LATEX} main.tex"
+    end
   end
 end
 
 desc "Compiles the document once."
 task :compile_once do
-  sh "#{LATEX} main.tex"
+  cd "src" do
+    sh "#{LATEX} main.tex"
+  end
 end
